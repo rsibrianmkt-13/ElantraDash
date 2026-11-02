@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,8 @@ class HomeActions(
     val apps: () -> Unit,
     val openMap: () -> Unit,
     val go: () -> Unit,
+    /** Tocar el carro abre Combustible (registrar recarga / consumo). */
+    val openFuel: () -> Unit,
 )
 
 private const val TOP = 100
@@ -113,15 +116,19 @@ fun HomeScreen(
             Box(Modifier.fillMaxSize()) {
                 when (p) {
                     HomePage.FULL -> {
-                        SpeedCard(speed.speedKmh, speed.permissionGranted, speed.gpsEnabled, a.requestLocation, Modifier.at(133, TOP, CARD_W, CARD_H).pageSwipe { go(it) })
+                        SpeedCard(speed.speedKmh, speed.permissionGranted, speed.gpsEnabled, a.requestLocation, a.openFuel, Modifier.at(133, TOP, CARD_W, CARD_H).pageSwipe { go(it) })
                         HomeMusicCard(media, phoneConnected, phoneName, music, a.openMusic, Modifier.at(514, TOP, CARD_W, CARD_H))
                         MapCard(speed, destination, route, a.openMap, a.go, Modifier.at(895, TOP, CARD_W, CARD_H).pageSwipe { go(it) })
                     }
                     HomePage.CLEAN -> CleanScene(speed, media, phoneConnected, phoneName, music, a, onSwipe = { go(it) })
-                    HomePage.LYRICS -> LyricsPage(
-                        media, lyrics, driving,
-                        Modifier.at(133, 0, 1147, 720).pageSwipe { go(it) },
-                    )
+                    HomePage.LYRICS -> Box(Modifier.fillMaxSize()) {
+                        LyricsPage(
+                            media, lyrics, driving,
+                            Modifier.at(133, 0, 1060, 720).pageSwipe { go(it) },
+                        )
+                        // Volumen táctil (+ / −, pasos de 10 %).
+                        VolumeControl(music, Modifier.offset((1280 - 26 - 64).dp, 250.dp))
+                    }
                 }
             }
         }
@@ -181,8 +188,8 @@ private fun PageDots(pages: List<HomePage>, current: HomePage, onTap: () -> Unit
 
 /** Foto oscura del Elantra a tarjeta completa; velocidad GPS arriba con 70 % de opacidad. */
 @Composable
-private fun SpeedCard(speedKmh: Int?, permissionGranted: Boolean, gpsEnabled: Boolean, onRequestLocation: () -> Unit, modifier: Modifier) {
-    DashCard(modifier) {
+private fun SpeedCard(speedKmh: Int?, permissionGranted: Boolean, gpsEnabled: Boolean, onRequestLocation: () -> Unit, onFuel: () -> Unit, modifier: Modifier) {
+    DashCard(modifier, onClick = onFuel) {
         Image(
             cachedImage(R.drawable.elantra_card),
             contentDescription = "Hyundai Elantra 2017 rojo vino",
@@ -231,7 +238,8 @@ private fun CleanScene(
                 cachedImage(R.drawable.elantra_scene),
                 contentDescription = "Hyundai Elantra 2017 rojo vino",
                 contentScale = ContentScale.FillBounds,
-                modifier = Modifier.at(-13, -30, 880, 510),
+                modifier = Modifier.at(-13, -30, 880, 510)
+                    .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, null, onClick = a.openFuel),
             )
             SpeedText(speed.speedKmh, speed.permissionGranted, speed.gpsEnabled, a.requestLocation)
         }

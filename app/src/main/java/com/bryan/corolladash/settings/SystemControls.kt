@@ -26,16 +26,16 @@ class SystemControls(private val context: Context) {
 
     /** Un paso de volumen (como las teclas físicas), sin mostrar el panel del sistema. Devuelve el nivel nuevo. */
     /**
-     * Sube o baja en pasos de 5 % (45 → 50 → 55), ajustado al nivel más cercano del sistema.
-     * Si 5 % es menos de un nivel, mueve al menos un nivel para que cada pulsación cambie algo.
+     * Sube o baja en pasos de 10 % (0 → 10 → 20 … 100), ajustado al nivel más cercano del sistema.
+     * Si 10 % es menos de un nivel, mueve al menos un nivel para que cada pulsación cambie algo.
      */
     fun stepVolume(up: Boolean): Float {
         val a = audio ?: return 0f
         val max = a.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
         val cur = a.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val slot = cur * 20f / max            // posición actual en la rejilla de 5 %
+        val slot = cur * 10f / max            // posición actual en la rejilla de 10 %
         val target = if (up) kotlin.math.floor(slot + 0.01f) + 1f else kotlin.math.ceil(slot - 0.01f) - 1f
-        var idx = kotlin.math.round(target.coerceIn(0f, 20f) * max / 20f).toInt()
+        var idx = kotlin.math.round(target.coerceIn(0f, 10f) * max / 10f).toInt()
         if (idx == cur) idx = cur + if (up) 1 else -1
         idx = idx.coerceIn(0, max)
         a.setStreamVolume(AudioManager.STREAM_MUSIC, idx, 0)

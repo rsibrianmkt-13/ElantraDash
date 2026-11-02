@@ -67,6 +67,7 @@ import com.bryan.corolladash.lyrics.LyricsState
 import com.bryan.corolladash.media.MediaState
 import com.bryan.corolladash.ui.music.LyricsBottomSheet
 import com.bryan.corolladash.ui.music.LyricsScreen
+import com.bryan.corolladash.ui.music.LyricsPage
 import com.bryan.corolladash.ui.components.CircleButton
 import com.bryan.corolladash.ui.components.DashCard
 import com.bryan.corolladash.ui.components.DashIcon
@@ -98,6 +99,8 @@ class MusicActions(
     val cycleRepeat: () -> Unit,
     /** Un paso de volumen (true = subir); devuelve el nivel nuevo 0–1. */
     val volumeStep: (Boolean) -> Float,
+    /** Nivel actual 0–1 (para mostrarlo junto a los botones de volumen). */
+    val volumeLevel: () -> Float = { 0f },
 )
 
 /** Situación real de la música, en orden de prioridad. */
@@ -302,7 +305,7 @@ fun MusicScreen(
             label = "lyrics",
         ) { full ->
             if (full) {
-                LyricsScreen(m, lyrics, driving, onSeek = actions.seekTo, onClose = { view = MusicView.NOW_PLAYING })
+                BigLyricsScreen(m, lyrics, driving, actions, onClose = { view = MusicView.NOW_PLAYING })
             } else {
                 NowPlaying(
                     m, st, actions,
@@ -316,6 +319,7 @@ fun MusicScreen(
                         }
                     },
                     onSwipeUp = { openLyrics(MusicView.SHEET) },
+                    onSwipeRight = { openLyrics(MusicView.LYRICS) },
                 )
             }
         }
@@ -343,10 +347,12 @@ private fun NowPlaying(
     dimmed: Boolean,
     onLyrics: () -> Unit,
     onSwipeUp: () -> Unit,
+    onSwipeRight: () -> Unit,
 ) {
     val enabled = st == MusicStatus.PLAYING || st == MusicStatus.IDLE
     val swipe = rememberSwipe()
     val up by rememberUpdatedState(onSwipeUp)
+    val right by rememberUpdatedState(onSwipeRight)
     val dim by animateFloatAsState(if (dimmed) 0.35f else 1f, tween(250), label = "dim")
     val volume = rememberVolumeHud()
     val x = 456
@@ -355,7 +361,8 @@ private fun NowPlaying(
         Modifier
             .fillMaxSize()
             .graphicsLayer { alpha = dim }
-            .trackSwipe(enabled, swipe, actions)
+            // Deslizar a la derecha abre la letra en grande (si hay letra); a la izquierda, siguiente canción.
+            .trackSwipe(enabled, swipe, actions, onRight = if (canLyrics) ({ right() }) else null)
             .swipeUpToOpen(canLyrics) { up() }
             .holdForVolume(volume, actions)
     ) {
@@ -534,7 +541,7 @@ private fun VolumeHud(hud: VolumeHudState, modifier: Modifier) {
             }
             Spacer(Modifier.width(12.dp))
             Text(
-                "${(last[0] * 100).roundToInt()}%",
+                "${(last[0] * 10).roundToInt() * 10}%",
                 style = DashType.Label.copy(fontSize = 16.sp, color = Dash.Text),
                 modifier = Modifier.width(48.dp),
                 textAlign = TextAlign.End,
@@ -555,8 +562,8 @@ private fun rememberSwipe(): SwipeState {
 }
 
 /** Izquierda = siguiente, derecha = anterior. Umbral 90 px; los botones siguen funcionando con toque. */
-private fun Modifier.trackSwipe(enabled: Boolean, s: SwipeState, actions: MusicActions): Modifier =
-    if (!enabled) this else this.pointerInput(actions) {
+private fun Modifier.trackSwipe(enabled: Boolean, s: SwipeState, actions: MusicActions, onRight: (() -> Unit)? = null): Modifier =
+    if (!enabled) this else this.pointerInput(actions, onRight != null) {
         val threshold = 90.dp.toPx()
         var total = 0f
         fun settle() { s.scope.launch { s.offset.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = 380f)) } }
@@ -565,7 +572,7 @@ private fun Modifier.trackSwipe(enabled: Boolean, s: SwipeState, actions: MusicA
             onDragEnd = {
                 when {
                     total <= -threshold -> actions.next()
-                    total >= threshold -> actions.previous()
+                    total >= threshold -> (onRight ?: actions.previous)()
                 }
                 settle()
             },
@@ -690,4 +697,81 @@ internal fun Progress(m: MediaState, x: Int, y: Int, w: Int, seekable: Boolean, 
 private fun fmt(ms: Long): String {
     val s = ms / 1000
     return "%d:%02d".format(s / 60, s % 60)
+}
+
+// ---------------------------------------------------------------- Volumen táctil (+ / −)
+
+/** Botones de volumen siempre visibles: + arriba, nivel en el centro (pasos de 10 %), − abajo. */
+@Composable
+internal fun VolumeControl(actions: MusicActions, modifier: Modifier) {
+    var level by remember { mutableStateOf(actions.volumeLevel()) }
+    LaunchedEffect(Unit) {
+        // Si se cambia con las teclas físicas o el volante, el número también se actualiza.
+        while (true) { delay(1500); level = actions.volumeLevel() }
+    }
+    val shape = RoundedCornerShape(32.dp)
+    Column(
+        modifier
+            .width(64.dp)
+            .clip(shape)
+            .background(Color(0xCC1A1B1E))
+            .border(1.dp, Dash.Border, shape),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier.size(64.dp).clip(CircleShape).clickable(onClickLabel = "Subir volumen") { level = actions.volumeStep(true) },
+            contentAlignment = Alignment.Center,
+        ) { Text("+", style = DashType.Title.copy(fontSize = 32.sp, color = Dash.Text)) }
+        DashIcon(DashIcons.Vol, 20, Dash.Icon2)
+        Text(
+            "${(level * 10).roundToInt() * 10}",
+            style = DashType.Label.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Dash.Text),
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+        )
+        Box(
+            Modifier.size(64.dp).clip(CircleShape).clickable(onClickLabel = "Bajar volumen") { level = actions.volumeStep(false) },
+            contentAlignment = Alignment.Center,
+        ) { Text("−", style = DashType.Title.copy(fontSize = 32.sp, color = Dash.Text)) }
+    }
+}
+
+// ---------------------------------------------------------------- Letra en grande (Música)
+
+/**
+ * Letra en grande con carátula pequeña y volumen táctil (1125×571).
+ * Se abre deslizando a la derecha en el reproductor o con el botón «Letra»; deslizar a la izquierda o ✕ vuelve.
+ */
+@Composable
+private fun BigLyricsScreen(m: MediaState, lyrics: LyricsState, driving: Boolean, actions: MusicActions, onClose: () -> Unit) {
+    val close by rememberUpdatedState(onClose)
+    val volume = rememberVolumeHud()
+    DashCard(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                val threshold = 90.dp.toPx()
+                var total = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { total = 0f },
+                    onDragEnd = { if (total <= -threshold) close() },
+                ) { change, amount -> change.consume(); total += amount }
+            }
+            .holdForVolume(volume, actions)
+    ) {
+        // Carátula en cuadrito + título y artista.
+        Artwork(m.art, Modifier.at(32, 28, 72, 72), radius = 12)
+        TextAt(m.title.orEmpty(), 122, 36, DashType.Title.copy(fontSize = 22.sp), maxWidth = 780.dp)
+        m.artist?.let { TextAt(it, 122, 66, DashType.Label.copy(fontSize = 17.sp, color = Dash.TextReadable), maxWidth = 780.dp) }
+        Box(
+            Modifier.at(1125 - 32 - 52, 32, 52, 52).clip(CircleShape).background(Dash.Well)
+                .clickable(onClickLabel = "Cerrar letra", onClick = onClose),
+            contentAlignment = Alignment.Center,
+        ) { DashIcon(DashIcons.X, 22, Dash.Icon) }
+
+        LyricsPage(m, lyrics, driving, Modifier.at(20, 112, 1125 - 140, 380))
+        VolumeControl(actions, Modifier.offset((1125 - 32 - 64).dp, 170.dp))
+
+        if (m.durationMs > 0) Progress(m, x = 60, y = 520, w = 1005, seekable = m.canSeek && !driving, onSeek = actions.seekTo)
+        VolumeHud(volume, Modifier.align(Alignment.Center))
+    }
 }

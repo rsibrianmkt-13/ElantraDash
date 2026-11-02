@@ -150,3 +150,10 @@ Si cambias de firma (otro equipo, o de debug a release) Android pide desinstalar
 - Firma fija: `keystore/debug.keystore` está en el repo para que todas las compilaciones de GitHub se instalen encima.
 - La primera vez Android pide permitir «Instalar apps desconocidas» y confirmar; después puede actualizarse sin preguntar (Android 12+).
 - El repositorio debe seguir **público** para que la app pueda descargar el APK.
+
+## Novedades v1.3.0
+
+- **Volumen en pasos de 10 %** (0, 10, 20 … 100) en todos los controles.
+- **Inicio · vista Letra**: botones + / − de volumen a la derecha.
+- **Música**: deslizar a la derecha abre la letra en grande con carátula pequeña, volumen + / − siempre visible y mantener presionado para volumen; deslizar a la izquierda o ✕ vuelve. (Sin letra disponible, deslizar a la derecha sigue siendo «anterior».)
+- **Inicio**: tocar la tarjeta del carro abre **Combustible** para registrar recargas.

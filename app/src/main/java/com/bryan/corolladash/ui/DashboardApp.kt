@@ -305,6 +305,7 @@ fun DashboardApp(c: AppContainer, section: MutableState<Section>, resumeTick: In
             toggleShuffle = c.media::toggleShuffle,
             cycleRepeat = c.media::cycleRepeat,
             volumeStep = { up -> c.controls.stepVolume(up) },
+            volumeLevel = { c.controls.volumeFraction() },
         )
     }
 
@@ -322,6 +323,7 @@ fun DashboardApp(c: AppContainer, section: MutableState<Section>, resumeTick: In
             apps = { section.value = Section.APPS },
             openMap = { section.value = Section.MAP },
             go = { destination?.let { navigateTo(it) } },
+            openFuel = { section.value = Section.FUEL },
         )
     }
 
