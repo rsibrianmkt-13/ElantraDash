@@ -29,7 +29,7 @@ jobs:
           validate-wrappers: false
 
       - name: Compilar (release optimizada, firmada con la clave de debug)
-        run: gradle --no-daemon --stacktrace assembleRelease
+        run: gradle --no-daemon --stacktrace assembleRelease -PciVersionCode=$((100 + GITHUB_RUN_NUMBER))
 
       - name: Nombrar APK
         run: |
@@ -37,11 +37,15 @@ jobs:
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk "out/ElantraDash-$V-${GITHUB_SHA::7}.apk"
           cp app/build/outputs/apk/release/app-release.apk out/ElantraDash-latest.apk
+          # Lo lee el actualizador de la app.
+          echo "{\"versionCode\": $((100 + GITHUB_RUN_NUMBER)), \"versionName\": \"$V (#$GITHUB_RUN_NUMBER)\", \"sha\": \"${GITHUB_SHA::7}\"}" > out/version.json
 
       - uses: actions/upload-artifact@v4
         with:
           name: ElantraDash-apk
-          path: out/*.apk
+          path: |
+            out/*.apk
+            out/version.json
 
       # Copia del último APK en la rama "apk" (un solo commit) para descargarlo fácilmente.
       - name: Publicar en rama apk

@@ -142,3 +142,11 @@ Si cambias de firma (otro equipo, o de debug a release) Android pide desinstalar
 - **Aplicaciones**: íconos de 96 px en 6 columnas con nombre debajo; fila «Sistema» compacta (84 px) a todo el ancho.
 - **Inicio · vista limpia**: Elantra más grande y dominante; música compacta a la derecha sin tarjeta; accesos inferiores integrados (solo ícono + texto, sin tarjetas).
 - **Ícono de Ajustes**: nuevo engranaje sólido de 8 dientes.
+
+## Novedades v1.2.0 — Actualización desde la app
+
+- **Ajustes → Sistema → Actualizaciones**: busca en GitHub (`rama apk/version.json`), descarga `ElantraDash-latest.apk` e instala con PackageInstaller. Al arrancar revisa sola y avisa «Actualización disponible».
+- Cada push a `main` sube el `versionCode` (100 + número de ejecución de Actions), así la app siempre detecta la versión nueva.
+- Firma fija: `keystore/debug.keystore` está en el repo para que todas las compilaciones de GitHub se instalen encima.
+- La primera vez Android pide permitir «Instalar apps desconocidas» y confirmar; después puede actualizarse sin preguntar (Android 12+).
+- El repositorio debe seguir **público** para que la app pueda descargar el APK.

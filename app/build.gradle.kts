@@ -20,8 +20,9 @@ android {
         applicationId = "com.bryan.elantradash"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.1.0-elantra"
+        // En GitHub Actions: 100 + número de ejecución (siempre sube → la app detecta la actualización).
+        versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 14
+        versionName = "1.2.0-elantra"
     }
 
     signingConfigs {

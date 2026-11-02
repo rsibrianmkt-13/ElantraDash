@@ -204,6 +204,12 @@ object DashIcons {
       }
     }
 
+    val Download: ImageVector by lazy {
+      icon("download") {
+        p("M12 3.5v11.5M7 10.5l5 5 5-5M4.5 19.5h15", fill = false, stroke = true, width = 1.8f, alpha = 1.0f)
+      }
+    }
+
     val Info: ImageVector by lazy {
       icon("info") {
         p("M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0z", fill = false, stroke = true, width = 1.7f, alpha = 1.0f)

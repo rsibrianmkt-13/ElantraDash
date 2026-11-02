@@ -594,6 +594,16 @@ fun DashboardApp(c: AppContainer, section: MutableState<Section>, resumeTick: In
                     .padding(horizontal = 26.dp, vertical = 13.dp),
             )
         }
+        // Aviso único cuando GitHub tiene una versión nueva.
+        LaunchedEffect(Unit) {
+            var shown = false
+            c.updater.state.collect { u ->
+                if (u is com.bryan.corolladash.update.UpdateState.Available && !shown) {
+                    shown = true
+                    toast = "Actualización ${u.versionName} disponible · Ajustes → Sistema"
+                }
+            }
+        }
         LaunchedEffect(toast) {
             if (toast != null) {
                 delay(2500)

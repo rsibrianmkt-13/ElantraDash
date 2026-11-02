@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -319,6 +320,7 @@ private fun SystemPage(s: SettingsUiState, a: SettingsActions) {
         Group(null) {
             SettingRow(DashIcons.Home, "Aplicación de inicio", "Elegir", onClick = a.openHomeSettings)
             SettingRow(DashIcons.Lock, "Permisos", "$permsOk de 4") { a.navigate(SettingsPage.Permissions) }
+            UpdateRow()
             SettingRow(DashIcons.Info, "Información de ElantraDash", s.versionName) { a.navigate(SettingsPage.Info) }
             SettingRow(DashIcons.Gear, "Ajustes de Android", "", onClick = a.openAndroidSettings, last = true)
         }
@@ -730,6 +732,33 @@ fun GraySlider(value: Float, onChange: (Float) -> Unit, modifier: Modifier = Mod
     ) {
         Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(Dash.Track)) {
             Box(Modifier.fillMaxWidth(value.coerceIn(0f, 1f)).fillMaxHeight().background(Dash.Active))
+        }
+    }
+}
+
+/** Fila "Actualizaciones": busca en GitHub y, si hay versión nueva, la descarga e instala. */
+@Composable
+private fun UpdateRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val updater = (ctx.applicationContext as com.bryan.corolladash.CorollaDashApp).container.updater
+    val st by updater.state.collectAsState()
+    val value = when (val u = st) {
+        com.bryan.corolladash.update.UpdateState.Idle -> "Buscar"
+        com.bryan.corolladash.update.UpdateState.Checking -> "Buscando…"
+        com.bryan.corolladash.update.UpdateState.UpToDate -> "Al día"
+        is com.bryan.corolladash.update.UpdateState.Available -> "Instalar ${u.versionName}"
+        is com.bryan.corolladash.update.UpdateState.Downloading -> "Descargando ${u.percent} %"
+        com.bryan.corolladash.update.UpdateState.Installing -> "Instalando…"
+        com.bryan.corolladash.update.UpdateState.NeedsPermission -> "Permite instalar y toca de nuevo"
+        is com.bryan.corolladash.update.UpdateState.Error -> u.message
+    }
+    SettingRow(DashIcons.Download, "Actualizaciones", value) {
+        when (st) {
+            is com.bryan.corolladash.update.UpdateState.Available,
+            com.bryan.corolladash.update.UpdateState.NeedsPermission -> updater.install()
+            is com.bryan.corolladash.update.UpdateState.Downloading,
+            com.bryan.corolladash.update.UpdateState.Installing -> Unit
+            else -> updater.check(force = true)
         }
     }
 }

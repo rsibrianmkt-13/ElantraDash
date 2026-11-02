@@ -55,6 +55,7 @@ class AppContainer(context: Context) {
     val fuel = FuelRepository(app)
     val weather = WeatherRepository()
     val nav = NavRepository(app)
+    val updater = com.bryan.corolladash.update.Updater(app, scope)
 
     private val gpsRestart = MutableStateFlow(0)
 
@@ -67,6 +68,8 @@ class AppContainer(context: Context) {
                 media.refresh()
             }
         }
+        // Buscar actualización en GitHub poco después de arrancar.
+        scope.launch { delay(8_000); updater.check(force = true) }
     }
 
     /** Re-suscribe el GPS (al conceder permiso o al volver a primer plano). */
@@ -83,5 +86,6 @@ class AppContainer(context: Context) {
         status.refresh()
         media.refresh()
         restartGps()
+        updater.check()
     }
 }
